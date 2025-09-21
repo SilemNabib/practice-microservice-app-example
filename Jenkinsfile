@@ -2,25 +2,22 @@
 // JENKINSFILE - CI/CD PIPELINE FOR MICROSERVICES
 // ===========================================
 
-// Define global environment variables
-environment {
-    DOCKER_REGISTRY = "your-docker-registry" // e.g., Docker Hub username or ECR URL
-    AWS_REGION      = "us-west-2"
-    AWS_ACCOUNT_ID  = "123456789012" // Replace with your AWS Account ID
-    TERRAFORM_VERSION = "1.6.0"
-}
-
-// Define Docker agent for pipeline execution
-// This agent will have Docker and Terraform installed
-agent {
-    docker {
-        image 'jenkins/agent:latest'
-        args '-v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/terraform:/usr/local/bin/terraform'
+pipeline {
+    agent {
+        docker {
+            image 'jenkins/agent:latest'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/terraform:/usr/local/bin/terraform'
+        }
     }
-}
-
-// Define the pipeline stages
-stages {
+    
+    environment {
+        DOCKER_REGISTRY = "your-docker-registry" // e.g., Docker Hub username or ECR URL
+        AWS_REGION      = "us-west-2"
+        AWS_ACCOUNT_ID  = "123456789012" // Replace with your AWS Account ID
+        TERRAFORM_VERSION = "1.6.0"
+    }
+    
+    stages {
     // ===========================================
     // STAGE 1: CHECKOUT
     // ===========================================
@@ -171,7 +168,8 @@ post {
     success {
         echo "Pipeline successful!"
     }
-    failure {
-        echo "Pipeline failed!"
+        failure {
+            echo "Pipeline failed!"
+        }
     }
 }
