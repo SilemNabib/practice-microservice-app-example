@@ -77,6 +77,9 @@ module "redis" {
   project_name = local.project_name
   environment  = local.environment
   
+  # Deployment phase
+  deployment_phase = "local"
+  
   # Redis configuration
   redis_version     = var.redis_version
   redis_password    = var.redis_password
