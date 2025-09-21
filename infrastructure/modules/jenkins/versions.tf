@@ -6,10 +6,7 @@ terraform {
   required_version = ">= 1.0"
   
   required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.6.0"
-    }
+    # Docker provider removed - using Docker CLI directly in pipeline
     local = {
       source  = "hashicorp/local"
       version = "~> 2.4"

@@ -1,5 +1,5 @@
 # ===========================================
-# TERRAFORM CONFIGURATION - DEVELOPMENT ENVIRONMENT
+# MICROSERVICES INFRASTRUCTURE - DEV ENVIRONMENT
 # ===========================================
 
 # Terraform version and provider requirements
@@ -7,19 +7,21 @@ terraform {
   required_version = ">= 1.0"
   
   required_providers {
-    # Docker provider for local development (Phase 1)
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.6.0"
-    }
+    # Docker provider removed - using Docker CLI directly in pipeline
     
   # AWS provider for cloud deployment (Phase 2) - COMMENTED OUT FOR TESTING
   # aws = {
   #   source  = "hashicorp/aws"
   #   version = "~> 5.0"
   # }
+  
+    # Local provider for file generation
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0, ~> 2.4"
+    }
     
-    # Random provider for generating unique names
+    # Random provider for generating unique identifiers
     random = {
       source  = "hashicorp/random"
       version = "~> 3.1"
@@ -31,11 +33,7 @@ terraform {
 # PROVIDER CONFIGURATIONS
 # ===========================================
 
-# Docker provider configuration (Phase 1 - Local)
-# Automatically detects Docker Desktop or Colima
-provider "docker" {
-  host = var.docker_host
-}
+# Docker provider removed - using Docker CLI directly in pipeline
 
 # AWS provider configuration (Phase 2 - Cloud) - COMMENTED OUT FOR TESTING
 # Note: AWS credentials should be configured via AWS CLI or environment variables
@@ -65,153 +63,64 @@ locals {
     ManagedBy   = "terraform"
     Owner       = "devops-team"
   }
-  
-  # Network configuration
-  network_name = "${local.project_name}-${local.environment}-network"
-  
-  # Container naming
-  redis_container_name = "${local.project_name}-redis-${local.environment}"
-  jenkins_container_name = "${local.project_name}-jenkins-${local.environment}"
 }
 
 # ===========================================
-# DOCKER NETWORK (Phase 1 - Local)
+# MODULE CALLS - CONFIGURATION GENERATION
 # ===========================================
 
-# Use existing Docker network for microservices communication
-# (Created manually to avoid subnet conflicts)
-# resource "docker_network" "microservices_network" {
-#   count = var.deployment_phase == "local" ? 1 : 0
-#   
-#   name = local.network_name
-#   driver = "bridge"
-#   
-#   ipam_config {
-#     subnet = var.docker_network_subnet
-#   }
-# }
-
-# Data source to reference existing network
-data "docker_network" "microservices_network" {
-  name = local.network_name
-}
-
-# ===========================================
-# MODULE CALLS
-# ===========================================
-
-# Redis module (Cache Aside pattern)
+# Redis module for Cache Aside pattern configuration
 module "redis" {
   source = "../../modules/redis"
   
-  # Module variables
-  environment = local.environment
+  # Project configuration
   project_name = local.project_name
-  network_name = var.deployment_phase == "local" ? data.docker_network.microservices_network.name : null
+  environment  = local.environment
   
-  # Deployment phase
-  deployment_phase = var.deployment_phase
+  # Redis configuration
+  redis_version     = var.redis_version
+  redis_password    = var.redis_password
+  redis_port        = var.redis_port
   
-  # Redis configuration (from environment variables)
-  redis_version = var.redis_version
-  redis_port = var.redis_port
-  redis_password = var.redis_password
-  redis_memory_limit = var.redis_memory_limit
-  redis_memory_policy = var.redis_memory_policy
-  
-  # Cache TTL configuration (from environment variables)
-  cache_ttl_default = var.cache_ttl_default
-  cache_ttl_user_data = var.cache_ttl_user_data
+  # Cache Aside Pattern TTL settings
+  cache_ttl_default   = var.cache_ttl_default
   cache_ttl_todo_data = var.cache_ttl_todo_data
-  
-  # Common tags
-  tags = local.common_tags
-  
-    depends_on = [
-      data.docker_network.microservices_network
-    ]
+  cache_ttl_user_data = var.cache_ttl_user_data
 }
 
-# Docker Swarm module (Phase 1 - Local) - COMMENTED OUT FOR TESTING
-# module "docker_swarm" {
-#   count = var.deployment_phase == "local" ? 1 : 0
-#   source = "../../modules/docker-swarm"
-#   
-#   # Module variables
-#   environment = local.environment
-#   project_name = local.project_name
-#   network_name = data.docker_network.microservices_network.name
-#   
-#   # Common tags
-#   tags = local.common_tags
-#   
-#   depends_on = [
-#     docker_network.microservices_network
-#   ]
-# }
-
-# Jenkins module (CI/CD with Terraform integration)
+# Jenkins module for CI/CD configuration
 module "jenkins" {
   source = "../../modules/jenkins"
   
-  # Module variables
-  environment = local.environment
+  # Project configuration
   project_name = local.project_name
-  network_name = var.deployment_phase == "local" ? data.docker_network.microservices_network.name : null
+  environment  = local.environment
   
-  # Deployment phase
-  deployment_phase = var.deployment_phase
-  
-  # Jenkins configuration (from environment variables)
-  jenkins_version = var.jenkins_version
-  jenkins_port = var.jenkins_port
+  # Jenkins configuration
+  jenkins_version    = var.jenkins_version
+  jenkins_port       = var.jenkins_port
   jenkins_admin_user = var.jenkins_admin_user
   jenkins_admin_password = var.jenkins_admin_password
+  
+  # Terraform configuration
   terraform_version = var.terraform_version
-  
-  # Docker configuration
-  docker_host = var.docker_host
-  docker_socket_user = var.docker_socket_user
-  docker_socket_group = var.docker_socket_group
-  
-  # Common tags
-  tags = local.common_tags
-  
-  depends_on = [
-    data.docker_network.microservices_network
-  ]
 }
 
 # ===========================================
 # OUTPUTS
 # ===========================================
 
-output "environment" {
-  description = "Environment name"
-  value       = local.environment
+output "redis_config_file" {
+  description = "Path to generated Redis configuration file"
+  value       = module.redis.redis_config_file
 }
 
-output "project_name" {
-  description = "Project name"
-  value       = local.project_name
+output "jenkins_config_file" {
+  description = "Path to generated Jenkins configuration file"
+  value       = module.jenkins.jenkins_config_file
 }
 
-output "network_name" {
-  description = "Docker network name (local only)"
-  value       = var.deployment_phase == "local" ? data.docker_network.microservices_network.name : null
-}
-
-output "redis_endpoint" {
-  description = "Redis connection endpoint"
-  value       = module.redis.endpoint
-}
-
-output "jenkins_endpoint" {
-  description = "Jenkins access endpoint"
-  value       = module.jenkins.jenkins_endpoint
-}
-
-output "deployment_phase" {
-  description = "Current deployment phase"
-  value       = var.deployment_phase
+output "infrastructure_status" {
+  description = "Status of infrastructure configuration generation"
+  value       = "Configuration files generated successfully"
 }
