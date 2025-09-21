@@ -5,11 +5,12 @@
 # Generate Jenkins configuration file
 resource "local_file" "jenkins_config" {
   content = templatefile("${path.module}/jenkins.yaml.tpl", {
-    project_name       = var.project_name
-    environment        = var.environment
-    jenkins_port       = var.jenkins_port
-    jenkins_admin_user = var.jenkins_admin_user
-    terraform_version  = var.terraform_version
+    project_name        = var.project_name
+    environment         = var.environment
+    jenkins_port        = var.jenkins_port
+    jenkins_admin_user  = var.jenkins_admin_user
+    jenkins_admin_password = var.jenkins_admin_password
+    terraform_version   = var.terraform_version
   })
   
   filename = "${path.module}/jenkins.yaml"
