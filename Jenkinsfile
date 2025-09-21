@@ -29,7 +29,10 @@ node {
         echo "Building Docker images for microservices..."
         // Build Docker images for each microservice
         // Ensure docker-compose.yml is updated to use Terraform-managed Redis
-        sh 'docker-compose build'
+        sh '''
+            # Use docker-compose from host via mounted socket
+            docker-compose build
+        '''
     }
 
     // ===========================================
