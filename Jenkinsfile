@@ -16,20 +16,7 @@ pipeline {
     
     stages {
     // ===========================================
-    // STAGE 1: CHECKOUT
-    // ===========================================
-    stage('Checkout') {
-        steps {
-            script {
-                echo "Checking out SCM..."
-                // Checkout the source code from Git
-                git branch: 'dev', credentialsId: 'github-credentials', url: 'https://github.com/SilemNabib/practice-microservice-app-example.git'
-            }
-        }
-    }
-
-    // ===========================================
-    // STAGE 2: SETUP ENVIRONMENT
+    // STAGE 1: SETUP ENVIRONMENT
     // ===========================================
     stage('Setup Environment') {
         steps {
@@ -43,7 +30,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 3: BUILD MICROSERVICES
+    // STAGE 2: BUILD MICROSERVICES
     // ===========================================
     stage('Build Microservices') {
         steps {
@@ -57,7 +44,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 4: UNIT TESTS
+    // STAGE 3: UNIT TESTS
     // ===========================================
     stage('Unit Tests') {
         steps {
@@ -71,7 +58,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 5: INFRASTRUCTURE PROVISIONING (TERRAFORM)
+    // STAGE 4: INFRASTRUCTURE PROVISIONING (TERRAFORM)
     // ===========================================
     stage('Terraform Plan') {
         steps {
@@ -114,7 +101,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 6: DEPLOY MICROSERVICES
+    // STAGE 5: DEPLOY MICROSERVICES
     // ===========================================
     stage('Deploy Microservices') {
         steps {
@@ -127,7 +114,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 7: INTEGRATION TESTS
+    // STAGE 6: INTEGRATION TESTS
     // ===========================================
     stage('Integration Tests') {
         steps {
@@ -156,7 +143,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 8: CLEANUP
+    // STAGE 7: CLEANUP
     // ===========================================
     stage('Cleanup') {
         steps {
