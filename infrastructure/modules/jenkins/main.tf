@@ -70,11 +70,14 @@ resource "local_file" "jenkins_plugins" {
 resource "docker_container" "jenkins" {
   count = var.deployment_phase == "local" ? 1 : 0
   
-  name  = "${var.project_name}-jenkins-${var.environment}"
-  image = docker_image.jenkins[0].image_id
-  
-  # Container configuration
-  restart = "unless-stopped"
+    name  = "${var.project_name}-jenkins-${var.environment}"
+    image = docker_image.jenkins[0].image_id
+    
+    # Container configuration
+    restart = "unless-stopped"
+    
+    # Override entrypoint to run Docker socket fix first
+    command = ["/bin/bash", "-c", "/usr/local/bin/docker-socket-fix.sh && /usr/local/bin/jenkins.sh"]
   
   # Port mapping
   ports {
@@ -111,8 +114,15 @@ resource "docker_container" "jenkins" {
         read_only      = false
       }
       
-      # Use detected user for Docker socket access
-      user = "${var.docker_socket_user}:${var.docker_socket_group}"
+      # Mount Docker socket fix script
+      volumes {
+        host_path      = "${abspath(path.module)}/docker-socket-fix.sh"
+        container_path = "/usr/local/bin/docker-socket-fix.sh"
+        read_only      = false
+      }
+      
+      # Run as root but with proper socket permissions
+      user = "0:0"
   
       # Environment variables
       env = [
@@ -123,6 +133,8 @@ resource "docker_container" "jenkins" {
         "JENKINS_URL=http://localhost:${var.jenkins_port}",
         "TERRAFORM_VERSION=${var.terraform_version}",
         "DOCKER_HOST=unix:///var/run/docker.sock",  # Always use mounted socket inside container
+        "DOCKER_SOCKET_USER=${var.docker_socket_user}",
+        "DOCKER_SOCKET_GROUP=${var.docker_socket_group}",
       ]
   
   # Health check
