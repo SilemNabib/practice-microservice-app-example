@@ -29,7 +29,21 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 2: BUILD MICROSERVICES
+    // STAGE 2: SETUP ENVIRONMENT
+    // ===========================================
+    stage('Setup Environment') {
+        steps {
+            script {
+                echo "Setting up environment variables..."
+                // Copy .env.example to .env for Docker Compose
+                sh 'cp docker-compose.env.example .env'
+                echo "Environment setup complete."
+            }
+        }
+    }
+
+    // ===========================================
+    // STAGE 3: BUILD MICROSERVICES
     // ===========================================
     stage('Build Microservices') {
         steps {
@@ -43,7 +57,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 3: UNIT TESTS
+    // STAGE 4: UNIT TESTS
     // ===========================================
     stage('Unit Tests') {
         steps {
@@ -57,7 +71,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 4: INFRASTRUCTURE PROVISIONING (TERRAFORM)
+    // STAGE 5: INFRASTRUCTURE PROVISIONING (TERRAFORM)
     // ===========================================
     stage('Terraform Plan') {
         steps {
@@ -100,14 +114,12 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 5: DEPLOY MICROSERVICES
+    // STAGE 6: DEPLOY MICROSERVICES
     // ===========================================
     stage('Deploy Microservices') {
         steps {
             script {
                 echo "Deploying microservices using Docker Compose..."
-                // Copy .env.example to .env for Docker Compose
-                sh 'cp docker-compose.env.example .env'
                 // Start services, ensuring they connect to the Terraform-managed Redis
                 sh 'docker-compose up -d auth-api users-api todos-api log-message-processor frontend'
             }
@@ -115,7 +127,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 6: INTEGRATION TESTS
+    // STAGE 7: INTEGRATION TESTS
     // ===========================================
     stage('Integration Tests') {
         steps {
@@ -144,7 +156,7 @@ pipeline {
     }
 
     // ===========================================
-    // STAGE 7: CLEANUP
+    // STAGE 8: CLEANUP
     // ===========================================
     stage('Cleanup') {
         steps {
