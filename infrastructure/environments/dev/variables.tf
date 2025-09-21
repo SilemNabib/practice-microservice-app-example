@@ -136,6 +136,12 @@ variable "jenkins_admin_password" {
   sensitive   = true
 }
 
+variable "terraform_version" {
+  description = "Terraform version to install in Jenkins"
+  type        = string
+  default     = "1.6.0"
+}
+
 # ===========================================
 # NETWORKING CONFIGURATION
 # ===========================================

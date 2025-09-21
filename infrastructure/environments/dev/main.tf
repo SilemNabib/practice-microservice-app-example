@@ -150,25 +150,35 @@ module "redis" {
 #   ]
 # }
 
-# Jenkins module (CI/CD) - COMMENTED OUT FOR TESTING
-# module "jenkins" {
-#   source = "../../modules/jenkins"
-#   
-#   # Module variables
-#   environment = local.environment
-#   project_name = local.project_name
-#   network_name = var.deployment_phase == "local" ? data.docker_network.microservices_network.name : null
-#   
-#   # Deployment phase
-#   deployment_phase = var.deployment_phase
-#   
-#   # Common tags
-#   tags = local.common_tags
-#   
-#   depends_on = [
-#     docker_network.microservices_network
-#   ]
-# }
+# Jenkins module (CI/CD with Terraform integration)
+module "jenkins" {
+  source = "../../modules/jenkins"
+  
+  # Module variables
+  environment = local.environment
+  project_name = local.project_name
+  network_name = var.deployment_phase == "local" ? data.docker_network.microservices_network.name : null
+  
+  # Deployment phase
+  deployment_phase = var.deployment_phase
+  
+  # Jenkins configuration (from environment variables)
+  jenkins_version = var.jenkins_version
+  jenkins_port = var.jenkins_port
+  jenkins_admin_user = var.jenkins_admin_user
+  jenkins_admin_password = var.jenkins_admin_password
+  terraform_version = var.terraform_version
+  
+  # Docker configuration
+  docker_host = var.docker_host
+  
+  # Common tags
+  tags = local.common_tags
+  
+  depends_on = [
+    data.docker_network.microservices_network
+  ]
+}
 
 # ===========================================
 # OUTPUTS
@@ -194,10 +204,10 @@ output "redis_endpoint" {
   value       = module.redis.endpoint
 }
 
-# output "jenkins_endpoint" {
-#   description = "Jenkins access endpoint"
-#   value       = module.jenkins.endpoint
-# }
+output "jenkins_endpoint" {
+  description = "Jenkins access endpoint"
+  value       = module.jenkins.jenkins_endpoint
+}
 
 output "deployment_phase" {
   description = "Current deployment phase"

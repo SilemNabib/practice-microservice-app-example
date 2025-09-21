@@ -52,6 +52,9 @@ jenkins_port = 8080
 jenkins_admin_user = "admin"
 jenkins_admin_password = "admin123"
 
+# Terraform version for Jenkins integration
+terraform_version = "1.6.0"
+
 # ===========================================
 # NETWORKING CONFIGURATION
 # ===========================================
