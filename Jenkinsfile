@@ -12,6 +12,7 @@ pipeline {
         AWS_REGION      = "us-west-2"
         AWS_ACCOUNT_ID  = "123456789012" // Replace with your AWS Account ID
         TERRAFORM_VERSION = "1.6.0"
+        DOCKER_HOST = "unix:///var/run/docker.sock" // Use mounted socket for Docker-in-Docker
     }
     
     stages {
