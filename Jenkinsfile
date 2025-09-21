@@ -10,10 +10,7 @@ node {
     env.TERRAFORM_VERSION = "1.6.0"
     env.DOCKER_HOST = "unix:///var/run/docker.sock"
     
-    // Checkout code first
-    stage('Checkout') {
-        checkout scm
-    }
+    // Checkout is automatic when using "Pipeline script from SCM"
     
     // ===========================================
     // STAGE 1: SETUP ENVIRONMENT
