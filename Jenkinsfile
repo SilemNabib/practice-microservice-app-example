@@ -17,19 +17,6 @@ pipeline {
     
     stages {
     // ===========================================
-    // STAGE 0: CHECKOUT CODE
-    // ===========================================
-    stage('Checkout') {
-        steps {
-            script {
-                echo "Checking out code from repository..."
-                checkout scm
-                echo "Checkout complete."
-            }
-        }
-    }
-
-    // ===========================================
     // STAGE 1: SETUP ENVIRONMENT
     // ===========================================
     stage('Setup Environment') {
