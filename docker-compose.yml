@@ -1,0 +1,131 @@
+services:
+  # ===========================================
+  # INFRASTRUCTURE SERVICES
+  # ===========================================
+  
+  # Redis - Managed by Terraform (microservices-redis-dev)
+  # Redis instance is created and managed by Terraform infrastructure
+
+  # Zipkin - Distributed Tracing
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+
+  # Users API - Spring Boot Application
+  users-api:
+    build:
+      context: ./users-api
+      dockerfile: Dockerfile
+    container_name: users-api
+    ports:
+      - "${USERS_API_PORT}:${USERS_API_PORT}"
+    environment:
+      - SERVER_PORT=${USERS_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    # No depends_on needed - Redis is managed by Terraform
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Auth API - Go Application
+  auth-api:
+    build:
+      context: ./auth-api
+      dockerfile: Dockerfile
+    container_name: auth-api
+    ports:
+      - "${AUTH_API_PORT}:${AUTH_API_PORT}"
+    environment:
+      - AUTH_API_PORT=${AUTH_API_PORT}
+      - USERS_API_ADDRESS=http://users-api:${USERS_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Todos API - Node.js Application
+  todos-api:
+    build:
+      context: ./todos-api
+      dockerfile: Dockerfile
+    container_name: todos-api
+    ports:
+      - "${TODO_API_PORT}:${TODO_API_PORT}"
+    environment:
+      - TODO_API_PORT=${TODO_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHANNEL=${REDIS_CHANNEL}
+      # Cache Aside Pattern TTL Configuration (from Terraform)
+      - CACHE_TTL_DEFAULT=${CACHE_TTL_DEFAULT}
+      - CACHE_TTL_TODO_DATA=${CACHE_TTL_TODO_DATA}
+      - CACHE_TTL_USER_DATA=${CACHE_TTL_USER_DATA} 
+    # No depends_on needed - Redis is managed by Terraform
+    restart: unless-stopped
+    networks:
+      - microservices-dev-network  # Use Terraform network to connect to Redis
+      - microservices-network      # Keep original for other services
+
+  # Log Message Processor - Python Application
+  log-message-processor:
+    build:
+      context: ./log-message-processor
+      dockerfile: Dockerfile
+    container_name: log-processor
+    ports:
+      - "${LOG_MESSAGE_PROCESSOR_PORT}:${LOG_MESSAGE_PROCESSOR_PORT}"
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHANNEL=${REDIS_CHANNEL}
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+    # No depends_on needed - Redis is managed by Terraform
+    restart: unless-stopped
+    networks:
+      - microservices-dev-network  # Use Terraform network to connect to Redis
+      - microservices-network      # Keep original for other services
+
+  # Frontend - Vue.js Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    environment:
+      - PORT=80
+      - AUTH_API_URL=${AUTH_API_URL}
+      - TODOS_API_URL=${TODOS_API_URL}
+      - ZIPKIN_URL=${ZIPKIN_URL}
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+# ===========================================
+# NETWORKS
+# ===========================================
+networks:
+  microservices-network:
+    driver: bridge
+  # External network created by Terraform
+  microservices-dev-network:
+    external: true
+
+# ===========================================
+# VOLUMES
+# ===========================================
+# Redis data is managed by Terraform infrastructure
+# No volumes needed for this setup

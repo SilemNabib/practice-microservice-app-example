@@ -1,0 +1,32 @@
+# ===========================================
+# GITIGNORE PARA INFRASTRUCTURA
+# ===========================================
+
+# Variables de entorno sensibles
+.env.local
+.env
+*.env
+
+# Archivos de estado de Terraform
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Logs de Terraform
+*.log
+terraform.log
+
+# Archivos temporales
+*.tmp
+*.temp
+.DS_Store
+
+# Archivos de backup
+*.backup
+*.bak
+
+# Variables de entorno con datos sensibles
+docker.env.local
+terraform.tfvars.local
