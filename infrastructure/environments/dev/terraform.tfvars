@@ -28,7 +28,9 @@ docker_network_subnet = "192.168.100.0/24"
 # Docker host - automatically detects Docker Desktop or Colima
 # Docker Desktop: "unix:///var/run/docker.sock"
 # Colima: "unix:///Users/USERNAME/.colima/docker.sock"
-docker_host = "unix:///Users/santiago/.colima/docker.sock"
+# docker_host = "unix:///Users/santiago/.colima/default/docker.sock"  # Colima
+# docker_host = "unix:///var/run/docker.sock"  # Docker Desktop
+# Use environment variable: export TF_VAR_docker_host="unix:///Users/USERNAME/.colima/default/docker.sock"
 
 # ===========================================
 # REDIS CONFIGURATION
