@@ -3,7 +3,7 @@
 // ===========================================
 
 // Define global environment variables
-env {
+environment {
     DOCKER_REGISTRY = "your-docker-registry" // e.g., Docker Hub username or ECR URL
     AWS_REGION      = "us-west-2"
     AWS_ACCOUNT_ID  = "123456789012" // Replace with your AWS Account ID
