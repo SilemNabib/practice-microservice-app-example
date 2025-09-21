@@ -8,7 +8,7 @@ terraform {
   required_providers {
     docker = {
       source  = "kreuzwerker/docker"
-      version = "3.0.1"
+      version = "3.0.4"
     }
     local = {
       source  = "hashicorp/local"

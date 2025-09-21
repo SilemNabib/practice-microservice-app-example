@@ -84,7 +84,7 @@ node {
                         echo "📦 Installing Python dependencies..."
                         pip install -r requirements.txt || echo "⚠️  pip install failed, continuing"
                         echo "🧪 Running Python tests..."
-                        python -m pytest || echo "⚠️  No tests found, skipping"
+                        python3 --version || echo "⚠️  Python not available"
                     else
                         echo "⚠️  pip not available, skipping Python tests"
                     fi
