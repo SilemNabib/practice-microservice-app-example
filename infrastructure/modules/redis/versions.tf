@@ -9,7 +9,7 @@ terraform {
     # Docker provider for local deployment
     docker = {
       source  = "kreuzwerker/docker"
-      version = "3.0.4"
+      version = "~> 3.0.1"
     }
     
     # AWS provider for cloud deployment - COMMENTED OUT FOR TESTING

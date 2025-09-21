@@ -82,7 +82,7 @@ node {
                 if [ -f "requirements.txt" ]; then
                     if command -v pip >/dev/null 2>&1; then
                         echo "📦 Installing Python dependencies..."
-                        pip install -r requirements.txt || echo "⚠️  pip install failed, continuing"
+                        pip install -r requirements.txt --break-system-packages || echo "⚠️  pip install failed, continuing"
                         echo "🧪 Running Python tests..."
                         python3 --version || echo "⚠️  Python not available"
                     else
