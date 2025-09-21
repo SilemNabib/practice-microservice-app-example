@@ -121,7 +121,7 @@ node {
                         echo "✅ Terraform init successful"
                         terraform plan -out=tfplan
                         echo "✅ Terraform plan successful"
-                    elif terraform init -verify-plugins=false; then
+                    elif TF_CLI_CONFIG_FILE=/dev/null terraform init; then
                         echo "✅ Terraform init successful (plugins bypassed)"
                         terraform plan -out=tfplan
                         echo "✅ Terraform plan successful"
