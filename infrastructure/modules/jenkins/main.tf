@@ -110,16 +110,16 @@ resource "docker_container" "jenkins" {
     container_path = "/var/run/docker.sock"
   }
   
-  # Environment variables
-  env = [
-    "JENKINS_OPTS=--httpPort=8080",
-    "JAVA_OPTS=-Xmx2048m -Xms1024m",
-    "JENKINS_ADMIN_USER=${var.jenkins_admin_user}",
-    "JENKINS_ADMIN_PASSWORD=${var.jenkins_admin_password}",
-    "JENKINS_URL=http://localhost:${var.jenkins_port}",
-    "TERRAFORM_VERSION=${var.terraform_version}",
-    "DOCKER_HOST=${var.docker_host}",
-  ]
+      # Environment variables
+      env = [
+        "JENKINS_OPTS=--httpPort=8080",
+        "JAVA_OPTS=-Xmx2048m -Xms1024m",
+        "JENKINS_ADMIN_USER=${var.jenkins_admin_user}",
+        "JENKINS_ADMIN_PASSWORD=${var.jenkins_admin_password}",
+        "JENKINS_URL=http://localhost:${var.jenkins_port}",
+        "TERRAFORM_VERSION=${var.terraform_version}",
+        "DOCKER_HOST=unix:///var/run/docker.sock",  # Always use mounted socket inside container
+      ]
   
   # Health check
   healthcheck {

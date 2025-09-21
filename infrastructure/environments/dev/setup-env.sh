@@ -28,7 +28,7 @@ if command -v colima &> /dev/null; then
         USERNAME=$(whoami)
         COLIMA_SOCKET="/Users/$USERNAME/.colima/docker.sock"
         if [ -S "$COLIMA_SOCKET" ]; then
-            DOCKER_HOST="$COLIMA_SOCKET"
+            DOCKER_HOST="unix://$COLIMA_SOCKET"
             echo "✅ Colima detectado: $DOCKER_HOST"
         fi
     fi
@@ -38,7 +38,7 @@ fi
 if [ -z "$DOCKER_HOST" ]; then
     DOCKER_DESKTOP_SOCKET="/var/run/docker.sock"
     if [ -S "$DOCKER_DESKTOP_SOCKET" ]; then
-        DOCKER_HOST="$DOCKER_DESKTOP_SOCKET"
+        DOCKER_HOST="unix://$DOCKER_DESKTOP_SOCKET"
         echo "✅ Docker Desktop detectado: $DOCKER_HOST"
     fi
 fi
