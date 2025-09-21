@@ -15,45 +15,74 @@
 
 ### **Software Requerido:**
 - ✅ **Terraform** >= 1.0
-- ✅ **Docker** (Docker Desktop o Colima)
+- ✅ **Docker** (Docker Desktop en Windows/macOS, o Colima en macOS)
 - ✅ **Git** (para versionado)
 
 ### **Instalación de Terraform:**
+
+#### **macOS:**
 ```bash
-# macOS
+# Opción 1: Homebrew (Recomendado)
 brew install terraform
 
-# Verificar instalación
+# Opción 2: Descarga directa
+# Descargar desde: https://www.terraform.io/downloads.html
+# Mover a /usr/local/bin/terraform
+```
+
+#### **Windows:**
+```powershell
+# Opción 1: Chocolatey (Recomendado)
+choco install terraform
+
+# Opción 2: Scoop
+scoop install terraform
+
+# Opción 3: Descarga directa
+# Descargar desde: https://www.terraform.io/downloads.html
+# Agregar al PATH de Windows
+```
+
+#### **Verificar instalación:**
+```bash
+# macOS/Linux
+terraform version
+
+# Windows (PowerShell/CMD)
 terraform version
 ```
 
 ### **Verificar Docker:**
+
+#### **macOS:**
 ```bash
-# Verificar que Docker esté corriendo
+# Docker Desktop
 docker --version
 docker ps
+
+# Colima (alternativa a Docker Desktop)
+colima status
+docker --version
+docker ps
+```
+
+#### **Windows:**
+```powershell
+# Docker Desktop
+docker --version
+docker ps
+
+# Verificar que Docker Desktop esté corriendo
+# (Icono en la bandeja del sistema)
 ```
 
 ---
 
 ## ⚙️ CONFIGURACIÓN INICIAL
 
-### **1. Detectar tu configuración de Docker:**
-
-**Opción A: Script Automático (Recomendado)**
+### **1. Configurar Variables de Entorno:**
 ```bash
-cd infrastructure/environments/dev
-chmod +x detect-docker.sh
-./detect-docker.sh
-```
-
-**Opción B: Manual**
-- **Docker Desktop**: `unix:///var/run/docker.sock`
-- **Colima**: `unix:///Users/USERNAME/.colima/docker.sock`
-
-### **2. Configurar Variables de Entorno:**
-```bash
-# El script setup-env.sh ya carga las variables automáticamente
+# El script setup-env.sh carga las variables automáticamente
 # Pero si quieres verificar manualmente:
 source .env.local
 
@@ -65,11 +94,10 @@ echo $TF_VAR_docker_host
 
 ## 🔑 VARIABLES A CONFIGURAR
 
-### **🎯 NUEVO SISTEMA: Variables de Entorno (Recomendado)**
+### **🎯 SISTEMA: Variables de Entorno**
 
 **¡No más editar archivos de código!** Todo se configura con variables de entorno.
 
-### **✅ GARANTÍA TOTAL: Tu compañero NO tiene que modificar NADA**
 
 **El script `setup-env.sh` hace TODO automáticamente:**
 - ✅ Detecta tu configuración de Docker (Colima o Docker Desktop)
@@ -105,9 +133,13 @@ source .env.local
 ```
 
 ### **Variables principales que puedes cambiar:**
+
+#### **macOS/Linux:**
 ```bash
 # Docker Host (detectado automáticamente por el script)
-export TF_VAR_docker_host="unix:///Users/USERNAME/.colima/docker.sock"
+export TF_VAR_docker_host="unix:///Users/USERNAME/.colima/docker.sock"  # Colima
+# o
+export TF_VAR_docker_host="unix:///var/run/docker.sock"                   # Docker Desktop
 
 # Network Subnet (cambiar si hay conflicto)
 export TF_VAR_docker_network_subnet="192.168.100.0/24"
@@ -131,7 +163,34 @@ export TF_VAR_cache_ttl_user_data="600"
 export TF_VAR_cache_ttl_todo_data="180"
 ```
 
-### **✅ Ventajas del nuevo sistema:**
+#### **Windows (PowerShell):**
+```powershell
+# Docker Host (detectado automáticamente por el script)
+$env:TF_VAR_docker_host="npipe:////./pipe/docker_engine"  # Docker Desktop Windows
+
+# Network Subnet (cambiar si hay conflicto)
+$env:TF_VAR_docker_network_subnet="192.168.100.0/24"
+
+# Redis Password (cambiar por seguridad)
+$env:TF_VAR_redis_password="mi-password-segura"
+
+# Redis Port (cambiar si está ocupado)
+$env:TF_VAR_redis_port="6379"
+
+# Redis Version (opcional)
+$env:TF_VAR_redis_version="7.0-alpine"
+
+# Redis Memory Configuration (opcional)
+$env:TF_VAR_redis_memory_limit="256mb"
+$env:TF_VAR_redis_memory_policy="allkeys-lru"
+
+# Cache TTL Configuration (opcional)
+$env:TF_VAR_cache_ttl_default="300"
+$env:TF_VAR_cache_ttl_user_data="600"
+$env:TF_VAR_cache_ttl_todo_data="180"
+```
+
+### **✅ Ventajas del sistema:**
 - **No tocar código fuente** - Mantener código limpio
 - **Configuración por entorno** - Cada desarrollador su configuración
 - **Seguridad** - Passwords no en el código
@@ -143,14 +202,25 @@ export TF_VAR_cache_ttl_todo_data="180"
 
 ## 📝 COMANDOS PASO A PASO
 
-### **🚀 MÉTODO NUEVO (Recomendado):**
+### **🚀 MÉTODO RECOMENDADO:**
 
 ### **PASO 1: Navegar al directorio**
+
+#### **macOS/Linux:**
 ```bash
 cd infrastructure/environments/dev
 ```
 
+#### **Windows (PowerShell):**
+```powershell
+Set-Location infrastructure\environments\dev
+# o
+cd infrastructure\environments\dev
+```
+
 ### **PASO 2: Configurar entorno automáticamente**
+
+#### **macOS/Linux:**
 ```bash
 # IMPORTANTE: Debes estar en el directorio correcto
 pwd
@@ -158,6 +228,17 @@ pwd
 
 # Ejecutar script automático (detecta todo y configura)
 ./setup-env.sh
+```
+
+#### **Windows (PowerShell):**
+```powershell
+# IMPORTANTE: Debes estar en el directorio correcto
+Get-Location
+# Debe mostrar: C:\ruta\al\proyecto\infrastructure\environments\dev
+
+# Ejecutar script automático (detecta todo y configura)
+.\setup-env.sh
+```
 
 # SALIDA ESPERADA:
 # 🚀 Configurando entorno para Terraform...
@@ -178,6 +259,7 @@ pwd
 
 ### **PASO 3: Inicializar Terraform**
 ```bash
+# macOS/Linux/Windows (PowerShell)
 terraform init
 
 # SALIDA ESPERADA:
@@ -192,11 +274,12 @@ terraform init
 
 ### **PASO 4: Revisar el plan**
 ```bash
+# macOS/Linux/Windows (PowerShell)
 terraform plan
 
 # SALIDA ESPERADA:
 # Plan: 3 to add, 0 to change, 0 to destroy.
-# + docker_network.microservices_network[0] will be created
+# + data.docker_network.microservices_network will be read
 # + module.redis.docker_container.redis[0] will be created
 # + module.redis.docker_image.redis[0] will be created
 # + module.redis.docker_volume.redis_data[0] will be created
@@ -204,6 +287,7 @@ terraform plan
 
 ### **PASO 5: Aplicar la infraestructura**
 ```bash
+# macOS/Linux/Windows (PowerShell)
 terraform apply -auto-approve
 
 # SALIDA ESPERADA:
@@ -217,57 +301,32 @@ terraform apply -auto-approve
 ```
 
 ### **PASO 6: Verificar que funciona**
+
+#### **macOS/Linux:**
 ```bash
 # Ver contenedores
 docker ps | grep redis
 
-# SALIDA ESPERADA:
-# ffcd08b8b66e   755105238729   "docker-entrypoint.s…"   7 seconds ago   Up 7 seconds (health: starting)   0.0.0.0:6379->6379/tcp   microservices-redis-dev
+# Probar Redis
+docker exec microservices-redis-dev redis-cli -a redis123 ping
+```
+
+#### **Windows (PowerShell):**
+```powershell
+# Ver contenedores
+docker ps | Select-String redis
 
 # Probar Redis
 docker exec microservices-redis-dev redis-cli -a redis123 ping
+```
 
-# SALIDA ESPERADA:
+#### **SALIDA ESPERADA (ambas plataformas):**
+```
+# ffcd08b8b66e   755105238729   "docker-entrypoint.s…"   7 seconds ago   Up 7 seconds (health: starting)   0.0.0.0:6379->6379/tcp   microservices-redis-dev
+
 # PONG
 # Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.
 ```
-
----
-
-### **🔧 MÉTODO MANUAL (Si prefieres control total):**
-
-### **PASO 1: Navegar al directorio**
-```bash
-cd infrastructure/environments/dev
-```
-
-### **PASO 2: Configurar variables manualmente**
-```bash
-# IMPORTANTE: Debes estar en el directorio correcto
-pwd
-# Debe mostrar: /ruta/al/proyecto/infrastructure/environments/dev
-
-# Copiar template (se crea en el directorio actual)
-cp env.template .env.local
-
-# Verificar que se creó en el lugar correcto
-ls -la .env.local
-# Debe mostrar: -rw-r--r-- 1 user user 1234 fecha .env.local
-
-# Editar variables (cambiar USERNAME por tu usuario)
-nano .env.local
-
-# Cargar variables
-source .env.local
-```
-
-### **PASO 3: Crear red Docker**
-```bash
-# Crear red (el script lo hace automáticamente)
-docker network create --driver bridge --subnet=192.168.100.0/24 microservices-dev-network
-```
-
-### **PASO 4-6: Igual que método nuevo**
 
 ---
 
@@ -311,7 +370,7 @@ module "redis" {
 }
 ```
 
-### ** Archivos que se crean automáticamente:**
+### **📁 Archivos que se crean automáticamente:**
 
 ```
 infrastructure/environments/dev/
@@ -354,7 +413,7 @@ echo 'var.redis_password' | terraform console
 echo 'module.redis.redis_password' | terraform console
 ```
 
-### ** Si quieres cambiar configuración:**
+### **🔄 Si quieres cambiar configuración:**
 
 ```bash
 # Opción 1: Editar .env.local
@@ -376,20 +435,49 @@ terraform apply -auto-approve
 ## 🚨 TROUBLESHOOTING
 
 ### **Error: `command not found: terraform`**
+
+#### **macOS:**
 ```bash
 # Solución: Instalar Terraform
 brew install terraform
 ```
 
+#### **Windows:**
+```powershell
+# Solución: Instalar Terraform
+choco install terraform
+# o
+scoop install terraform
+```
+
 ### **Error: `Error pinging Docker server`**
+
+#### **macOS:**
 ```bash
 # Solución: Verificar Docker y configurar DOCKER_HOST
 docker ps  # Debe funcionar
-export DOCKER_HOST="unix:///Users/TU-USUARIO/.colima/docker.sock"
+export DOCKER_HOST="unix:///Users/TU-USUARIO/.colima/docker.sock"  # Colima
+# o
+export DOCKER_HOST="unix:///var/run/docker.sock"                   # Docker Desktop
+```
+
+#### **Windows:**
+```powershell
+# Solución: Verificar Docker Desktop
+docker ps  # Debe funcionar
+$env:DOCKER_HOST="npipe:////./pipe/docker_engine"  # Docker Desktop Windows
 ```
 
 ### **Error: `Pool overlaps with other one`**
+
+#### **macOS/Linux:**
 ```bash
+# Solución: Crear red manualmente
+docker network create --driver bridge --subnet=192.168.100.0/24 microservices-dev-network
+```
+
+#### **Windows:**
+```powershell
 # Solución: Crear red manualmente
 docker network create --driver bridge --subnet=192.168.100.0/24 microservices-dev-network
 ```
@@ -401,28 +489,49 @@ docker network create --driver bridge --subnet=192.168.100.0/24 microservices-de
 ```
 
 ### **Error: `Invalid provider configuration`**
+
+#### **macOS/Linux:**
 ```bash
 # Solución: Re-inicializar Terraform
 rm -rf .terraform .terraform.lock.hcl
 terraform init
 ```
 
+#### **Windows:**
+```powershell
+# Solución: Re-inicializar Terraform
+Remove-Item -Recurse -Force .terraform
+Remove-Item .terraform.lock.hcl
+terraform init
+```
+
 ### **Redis no responde:**
 ```bash
-# Verificar logs
+# Verificar logs (ambas plataformas)
 docker logs microservices-redis-dev
 
-# Reiniciar contenedor
+# Reiniciar contenedor (ambas plataformas)
 docker restart microservices-redis-dev
 ```
 
 ### **Error: `No such file or directory: .env.local`**
+
+#### **macOS/Linux:**
 ```bash
 # Causa: El archivo .env.local no existe o no está en el directorio correcto
 # Solución:
 pwd  # Debe mostrar: infrastructure/environments/dev
 ./setup-env.sh  # Crear archivo automáticamente
 ls -la .env.local  # Verificar que se creó
+```
+
+#### **Windows:**
+```powershell
+# Causa: El archivo .env.local no existe o no está en el directorio correcto
+# Solución:
+Get-Location  # Debe mostrar: infrastructure\environments\dev
+.\setup-env.sh  # Crear archivo automáticamente
+Get-ChildItem .env.local  # Verificar que se creó
 ```
 
 ### **Error: `Reference to undeclared input variable`**
@@ -491,6 +600,8 @@ grep -r "variable" variables.tf  # Ver qué variables están declaradas
 ## 📞 COMANDOS DE EMERGENCIA
 
 ### **Limpiar todo y empezar de nuevo:**
+
+#### **macOS/Linux:**
 ```bash
 # Destruir infraestructura
 terraform destroy -auto-approve
@@ -505,12 +616,29 @@ docker network rm microservices-dev-network
 rm -rf .terraform .terraform.lock.hcl terraform.tfstate*
 ```
 
+#### **Windows:**
+```powershell
+# Destruir infraestructura
+terraform destroy -auto-approve
+
+# Limpiar Docker
+docker stop microservices-redis-dev
+docker rm microservices-redis-dev
+docker volume rm microservices-redis-dev-data
+docker network rm microservices-dev-network
+
+# Limpiar Terraform
+Remove-Item -Recurse -Force .terraform
+Remove-Item .terraform.lock.hcl
+Remove-Item terraform.tfstate*
+```
+
 ### **Verificar estado:**
 ```bash
-# Estado de Terraform
+# Estado de Terraform (ambas plataformas)
 terraform show
 
-# Estado de Docker
+# Estado de Docker (ambas plataformas)
 docker ps -a
 docker network ls
 docker volume ls
@@ -527,11 +655,13 @@ docker volume ls
 
 ---
 
-## 👥 PARA EL EQUIPO
+## 👥 PARA DESARROLLADORES
 
-### **🎯 INSTRUCCIONES PARA NUEVOS MIEMBROS DEL EQUIPO:**
+### **🎯 INSTRUCCIONES PARA NUEVOS DESARROLLADORES:**
 
 #### **📋 Lo que necesitas hacer (SÚPER FÁCIL):**
+
+#### **macOS/Linux:**
 ```bash
 # 1. Clonar el repositorio
 git clone <repo-url>
@@ -553,7 +683,31 @@ terraform apply -auto-approve
 # ¡LISTO! Redis está funcionando
 ```
 
+#### **Windows (PowerShell):**
+```powershell
+# 1. Clonar el repositorio
+git clone <repo-url>
+Set-Location practice-microservice-app-example
+
+# 2. Ir al directorio de infraestructura (IMPORTANTE: debe ser este directorio exacto)
+Set-Location infrastructure\environments\dev
+
+# 3. Verificar que estás en el lugar correcto
+Get-Location
+# Debe mostrar: C:\ruta\al\proyecto\infrastructure\environments\dev
+
+# 4. Ejecutar script automático (detecta TODO)
+.\setup-env.sh
+
+# 5. Aplicar infraestructura
+terraform apply -auto-approve
+
+# ¡LISTO! Redis está funcionando
+```
+
 #### **📍 IMPORTANTE: Ubicación del .env.local**
+
+#### **macOS/Linux:**
 ```bash
 # El archivo .env.local se crea en:
 infrastructure/environments/dev/.env.local
@@ -561,6 +715,16 @@ infrastructure/environments/dev/.env.local
 # Verificar que se creó correctamente
 ls -la .env.local
 # Debe mostrar: -rw-r--r-- 1 user user 1234 fecha .env.local
+```
+
+#### **Windows:**
+```powershell
+# El archivo .env.local se crea en:
+infrastructure\environments\dev\.env.local
+
+# Verificar que se creó correctamente
+Get-ChildItem .env.local
+# Debe mostrar: Mode, LastWriteTime, Length, Name
 ```
 
 #### **✅ Lo que el script hace automáticamente:**
@@ -591,6 +755,7 @@ terraform apply -auto-approve
 ```
 
 #### **📋 Si hay conflictos de red:**
+#### **macOS/Linux:**
 ```bash
 # 1. Verificar redes existentes
 docker network ls
@@ -606,15 +771,31 @@ docker network create --driver bridge --subnet=192.168.200.0/24 microservices-de
 terraform apply -auto-approve
 ```
 
+#### **Windows:**
+```powershell
+# 1. Verificar redes existentes
+docker network ls
+
+# 2. Cambiar subnet en .env.local
+$env:TF_VAR_docker_network_subnet="192.168.200.0/24"
+
+# 3. Recrear red
+docker network rm microservices-dev-network
+docker network create --driver bridge --subnet=192.168.200.0/24 microservices-dev-network
+
+# 4. Aplicar cambios
+terraform apply -auto-approve
+```
+
 #### **📋 Mantenimiento:**
 - **Documentar cambios** en la configuración
 - **Mantener esta guía actualizada**
-- **Verificar que el script funciona** en diferentes máquinas
+- **Verificar que el script funciona** en diferentes sistemas operativos
 - **Revisar conflictos** de red periódicamente
 
 ### **🚨 SITUACIONES ESPECIALES:**
 
-#### **Si tu compañero tiene Docker Desktop y tú Colima:**
+#### **Si tienes Docker Desktop y otro desarrollador tiene Colima:**
 ```bash
 # El script detecta automáticamente
 # No necesitas cambiar nada
@@ -632,6 +813,8 @@ docker network create --driver bridge --subnet=192.168.200.0/24 microservices-de
 ```
 
 #### **Si quieres cambiar password de Redis:**
+
+#### **macOS/Linux:**
 ```bash
 # Editar .env.local
 nano .env.local
@@ -644,15 +827,37 @@ source .env.local
 terraform apply -auto-approve
 ```
 
+#### **Windows:**
+```powershell
+# Editar .env.local
+notepad .env.local
+
+# Cambiar línea:
+$env:TF_VAR_redis_password="mi-nueva-password"
+
+# Recargar y aplicar
+terraform apply -auto-approve
+```
+
 ### **📞 SOPORTE:**
 
 #### **Si algo no funciona:**
+
+#### **macOS/Linux:**
 1. **Ejecutar script nuevamente**: `./setup-env.sh`
 2. **Verificar Docker**: `docker ps`
 3. **Verificar variables**: `echo $TF_VAR_docker_host`
-4. **Preguntar al equipo** si persiste el problema
+4. **Preguntar al equipo o revisar la documentación** si persiste el problema
+
+#### **Windows:**
+1. **Ejecutar script nuevamente**: `.\setup-env.sh`
+2. **Verificar Docker**: `docker ps`
+3. **Verificar variables**: `echo $env:TF_VAR_docker_host`
+4. **Preguntar al equipo o revisar la documentación** si persiste el problema
 
 #### **Comandos de emergencia:**
+
+#### **macOS/Linux:**
 ```bash
 # Limpiar todo y empezar de nuevo
 terraform destroy -auto-approve
@@ -661,6 +866,11 @@ docker network rm microservices-dev-network
 terraform apply -auto-approve
 ```
 
----
-
-**🎉 ¡Felicidades! Has implementado exitosamente Infrastructure as Code con Terraform y Redis usando el patrón Cache Aside.**
+#### **Windows:**
+```powershell
+# Limpiar todo y empezar de nuevo
+terraform destroy -auto-approve
+docker network rm microservices-dev-network
+.\setup-env.sh
+terraform apply -auto-approve
+```
