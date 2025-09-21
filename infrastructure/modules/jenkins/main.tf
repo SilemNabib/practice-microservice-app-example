@@ -111,8 +111,8 @@ resource "docker_container" "jenkins" {
         read_only      = false
       }
       
-      # Add user to docker group for socket access
-      user = "0:0"  # Run as root to access socket
+      # Use detected user for Docker socket access
+      user = "${var.docker_socket_user}:${var.docker_socket_group}"
   
       # Environment variables
       env = [

@@ -49,6 +49,18 @@ variable "docker_host" {
   default     = "unix:///var/run/docker.sock"
 }
 
+variable "docker_socket_user" {
+  description = "User ID for Docker socket access (auto-detected)"
+  type        = string
+  default     = "0"
+}
+
+variable "docker_socket_group" {
+  description = "Group ID for Docker socket access (auto-detected)"
+  type        = string
+  default     = "0"
+}
+
 # ===========================================
 # REDIS CONFIGURATION
 # ===========================================

@@ -171,6 +171,8 @@ module "jenkins" {
   
   # Docker configuration
   docker_host = var.docker_host
+  docker_socket_user = var.docker_socket_user
+  docker_socket_group = var.docker_socket_group
   
   # Common tags
   tags = local.common_tags
