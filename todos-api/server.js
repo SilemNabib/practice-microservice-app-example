@@ -12,23 +12,46 @@ const {HttpLogger} = require('zipkin-transport-http');
 const zipkinMiddleware = require('zipkin-instrumentation-express').expressMiddleware;
 
 const logChannel = process.env.REDIS_CHANNEL || 'log_channel';
-const redisClient = require("redis").createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  retry_strategy: function (options) {
-      if (options.error && options.error.code === 'ECONNREFUSED') {
-          return new Error('The server refused the connection');
+// Redis v4 client configuration
+const { createClient } = require('redis');
+
+// Redis v4 configuration - using URL format for better compatibility
+const redisUrl = `redis://:${process.env.REDIS_PASSWORD || 'redis123'}@${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
+console.log('🔗 Connecting to Redis:', redisUrl.replace(/:\/\/:[^@]+@/, '://***@')); // Hide password in logs
+
+const redisClient = createClient({
+  url: redisUrl,
+  socket: {
+    reconnectStrategy: function (retries) {
+      if (retries > 10) {
+        console.log('❌ Max Redis reconnection attempts reached');
+        return new Error('Max Redis reconnection attempts reached');
       }
-      if (options.total_retry_time > 1000 * 60 * 60) {
-          return new Error('Retry time exhausted');
-      }
-      if (options.attempt > 10) {
-          console.log('reattemtping to connect to redis, attempt #' + options.attempt)
-          return undefined;
-      }
-      return Math.min(options.attempt * 100, 2000);
-  }        
+      console.log(`🔄 Redis reconnection attempt #${retries}`);
+      return Math.min(retries * 100, 2000);
+    }
+  }
 });
+
+// Add Redis connection event handlers
+redisClient.on('connect', () => {
+    console.log('✅ Redis client connected');
+});
+
+redisClient.on('error', (err) => {
+    console.error('❌ Redis client error:', err);
+});
+
+redisClient.on('ready', () => {
+    console.log('🚀 Redis client ready');
+});
+
+redisClient.on('reconnecting', () => {
+    console.log('🔄 Redis client reconnecting...');
+});
+
+// Connect to Redis
+redisClient.connect().catch(console.error);
 const port = process.env.TODO_API_PORT || 8082
 const jwtSecret = process.env.JWT_SECRET || "foo"
 
