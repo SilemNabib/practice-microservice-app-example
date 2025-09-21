@@ -104,11 +104,15 @@ resource "docker_container" "jenkins" {
     container_path = "/var/jenkins_home/plugins.txt"
   }
   
-  # Mount Docker socket for Docker-in-Docker
-  volumes {
-    host_path      = replace(var.docker_host, "unix://", "")
-    container_path = "/var/run/docker.sock"
-  }
+      # Mount Docker socket for Docker-in-Docker
+      volumes {
+        host_path      = replace(var.docker_host, "unix://", "")
+        container_path = "/var/run/docker.sock"
+        read_only      = false
+      }
+      
+      # Add user to docker group for socket access
+      user = "0:0"  # Run as root to access socket
   
       # Environment variables
       env = [
