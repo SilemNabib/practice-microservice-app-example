@@ -39,7 +39,7 @@ pipeline {
                     echo "Building Docker images for microservices..."
                     // Build Docker images for each microservice
                     // Ensure docker-compose.yml is updated to use Terraform-managed Redis
-                    sh 'docker compose build'
+                    sh 'docker-compose build'
                 }
             }
         }
@@ -52,7 +52,7 @@ pipeline {
             script {
                     echo "Running unit tests for microservices..."
                     // Example: Run unit tests for todos-api
-                    sh 'docker compose run --rm todos-api npm test'
+                    sh 'docker-compose run --rm todos-api npm test'
                     // Add more unit tests for other microservices as needed
             }
         }
@@ -109,7 +109,7 @@ pipeline {
                 script {
                     echo "Deploying microservices using Docker Compose..."
                     // Start services, ensuring they connect to the Terraform-managed Redis
-                    sh 'docker compose up -d auth-api users-api todos-api log-message-processor frontend'
+                    sh 'docker-compose up -d auth-api users-api todos-api log-message-processor frontend'
                 }
             }
         }
@@ -150,7 +150,7 @@ pipeline {
             steps {
                 script {
                     echo "Cleaning up Docker Compose services..."
-                    sh 'docker compose down'
+                    sh 'docker-compose down'
                     echo "Cleanup complete."
                 }
             }
