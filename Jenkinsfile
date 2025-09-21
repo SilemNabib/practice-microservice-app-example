@@ -120,15 +120,6 @@ node {
     }
 }
 
-// Define post-build actions
-post {
-    always {
-        echo "🎉 Pipeline finished."
-    }
-    success {
-        echo "🎊 Pipeline successful!"
-    }
-    failure {
-        echo "💥 Pipeline failed!"
-    }
-}
+// Pipeline completed successfully
+echo "🎉 Pipeline finished successfully!"
+echo "🎊 All stages completed!"
