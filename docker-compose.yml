@@ -8,13 +8,13 @@ services:
     image: redis:7.0-alpine
     container_name: redis
     ports:
-      - "${REDIS_PORT}:6379" 
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      - "6380:6379" 
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -82,13 +82,19 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
-      - REDIS_CHANNEL=${REDIS_CHANNEL} 
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHANNEL=${REDIS_CHANNEL}
+      # Cache Aside Pattern TTL Configuration (from Terraform)
+      - CACHE_TTL_DEFAULT=${CACHE_TTL_DEFAULT}
+      - CACHE_TTL_TODO_DATA=${CACHE_TTL_TODO_DATA}
+      - CACHE_TTL_USER_DATA=${CACHE_TTL_USER_DATA} 
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - microservices-network
+      - microservices-dev-network  # Use Terraform network to connect to Redis
+      - microservices-network      # Keep original for other services
 
   # Log Message Processor - Python Application
   log-message-processor:
@@ -133,6 +139,9 @@ services:
 networks:
   microservices-network:
     driver: bridge
+  # External network created by Terraform
+  microservices-dev-network:
+    external: true
 
 # ===========================================
 # VOLUMES
