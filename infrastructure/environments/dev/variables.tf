@@ -134,6 +134,12 @@ variable "jenkins_port" {
   default     = 8080
 }
 
+variable "jenkins_url" {
+  description = "Jenkins URL"
+  type        = string
+  default     = "http://localhost:8080"
+}
+
 variable "jenkins_admin_user" {
   description = "Jenkins admin username"
   type        = string

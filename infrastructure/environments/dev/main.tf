@@ -102,6 +102,7 @@ module "jenkins" {
   # Jenkins configuration
   jenkins_version    = var.jenkins_version
   jenkins_port       = var.jenkins_port
+  jenkins_url        = var.jenkins_url
   jenkins_admin_user = var.jenkins_admin_user
   jenkins_admin_password = var.jenkins_admin_password
   
