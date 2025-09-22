@@ -189,13 +189,13 @@ node {
                 docker-compose ps
                 
                 echo "🧪 Testing service endpoints..."
-                if curl -f http://localhost:3001/health 2>/dev/null; then
+                if curl -f http://localhost:8082/health 2>/dev/null; then
                     echo "✅ todos-api is healthy"
                 else
                     echo "⚠️  todos-api not responding"
                 fi
                 
-                if curl -f http://localhost:8080/health 2>/dev/null; then
+                if curl -f http://localhost:8083/health 2>/dev/null; then
                     echo "✅ auth-api is healthy"
                 else
                     echo "⚠️  auth-api not responding"
@@ -220,7 +220,7 @@ node {
             
             # Test todos-api
             echo "🧪 Testing todos-api..."
-            if curl -f http://localhost:3001/todos 2>/dev/null; then
+            if curl -f http://localhost:8082/todos 2>/dev/null; then
                 echo "✅ todos-api GET /todos works"
             else
                 echo "⚠️  todos-api GET /todos failed"
@@ -228,7 +228,7 @@ node {
             
             # Test auth-api
             echo "🧪 Testing auth-api..."
-            if curl -f http://localhost:8080/health 2>/dev/null; then
+            if curl -f http://localhost:8083/health 2>/dev/null; then
                 echo "✅ auth-api health check works"
             else
                 echo "⚠️  auth-api health check failed"
