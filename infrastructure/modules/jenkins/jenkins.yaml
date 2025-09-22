@@ -1,0 +1,30 @@
+# ===========================================
+# JENKINS CONFIGURATION - SIMPLE AND ROBUST
+# ===========================================
+
+jenkins:
+  systemMessage: "Jenkins for microservices - dev environment. Terraform v1.6.0 ready."
+  numExecutors: 2
+  
+  # Security configuration
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin123"
+  
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  # Global environment variables
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "TERRAFORM_VERSION"
+            value: "1.6.0"
+          - key: "DOCKER_HOST"
+            value: "unix:///var/run/docker.sock"
+          - key: "JENKINS_URL"
+            value: "http://localhost:8080"

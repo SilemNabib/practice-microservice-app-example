@@ -49,6 +49,18 @@ variable "docker_host" {
   default     = "unix:///var/run/docker.sock"
 }
 
+variable "docker_socket_user" {
+  description = "User ID for Docker socket access (auto-detected)"
+  type        = string
+  default     = "0"
+}
+
+variable "docker_socket_group" {
+  description = "Group ID for Docker socket access (auto-detected)"
+  type        = string
+  default     = "0"
+}
+
 # ===========================================
 # REDIS CONFIGURATION
 # ===========================================
@@ -122,6 +134,12 @@ variable "jenkins_port" {
   default     = 8080
 }
 
+variable "jenkins_url" {
+  description = "Jenkins URL"
+  type        = string
+  default     = "http://localhost:8080"
+}
+
 variable "jenkins_admin_user" {
   description = "Jenkins admin username"
   type        = string
@@ -134,6 +152,12 @@ variable "jenkins_admin_password" {
   type        = string
   default     = "admin123"
   sensitive   = true
+}
+
+variable "terraform_version" {
+  description = "Terraform version to install in Jenkins"
+  type        = string
+  default     = "1.6.0"
 }
 
 # ===========================================

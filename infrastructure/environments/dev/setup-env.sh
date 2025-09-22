@@ -28,8 +28,12 @@ if command -v colima &> /dev/null; then
         USERNAME=$(whoami)
         COLIMA_SOCKET="/Users/$USERNAME/.colima/docker.sock"
         if [ -S "$COLIMA_SOCKET" ]; then
-            DOCKER_HOST="$COLIMA_SOCKET"
+            DOCKER_HOST="unix://$COLIMA_SOCKET"
+            # Detectar UID y GID del socket
+            SOCKET_USER=$(stat -f "%u" "$COLIMA_SOCKET")
+            SOCKET_GROUP=$(stat -f "%g" "$COLIMA_SOCKET")
             echo "✅ Colima detectado: $DOCKER_HOST"
+            echo "✅ Socket UID:GID: $SOCKET_USER:$SOCKET_GROUP"
         fi
     fi
 fi
@@ -38,8 +42,12 @@ fi
 if [ -z "$DOCKER_HOST" ]; then
     DOCKER_DESKTOP_SOCKET="/var/run/docker.sock"
     if [ -S "$DOCKER_DESKTOP_SOCKET" ]; then
-        DOCKER_HOST="$DOCKER_DESKTOP_SOCKET"
+        DOCKER_HOST="unix://$DOCKER_DESKTOP_SOCKET"
+        # Detectar UID y GID del socket
+        SOCKET_USER=$(stat -c "%u" "$DOCKER_DESKTOP_SOCKET" 2>/dev/null || stat -f "%u" "$DOCKER_DESKTOP_SOCKET" 2>/dev/null)
+        SOCKET_GROUP=$(stat -c "%g" "$DOCKER_DESKTOP_SOCKET" 2>/dev/null || stat -f "%g" "$DOCKER_DESKTOP_SOCKET" 2>/dev/null)
         echo "✅ Docker Desktop detectado: $DOCKER_HOST"
+        echo "✅ Socket UID:GID: $SOCKET_USER:$SOCKET_GROUP"
     fi
 fi
 
@@ -80,6 +88,10 @@ cat > .env.local << EOF
 
 # Docker Host (detectado automáticamente)
 export TF_VAR_docker_host="$DOCKER_HOST"
+
+# Docker Socket Permissions (detectado automáticamente)
+export TF_VAR_docker_socket_user="$SOCKET_USER"
+export TF_VAR_docker_socket_group="$SOCKET_GROUP"
 
 # Docker Network Subnet
 export TF_VAR_docker_network_subnet="$NETWORK_SUBNET"
