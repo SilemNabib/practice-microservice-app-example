@@ -3,23 +3,8 @@ services:
   # INFRASTRUCTURE SERVICES
   # ===========================================
   
-  # Redis - Cache and Message Queue
-  redis:
-    image: redis:7.0-alpine
-    container_name: redis
-    ports:
-      - "${REDIS_PORT}:6379" 
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - microservices-network
+  # Redis - Managed by Terraform (microservices-redis-dev)
+  # Redis instance is created and managed by Terraform infrastructure
 
   # Zipkin - Distributed Tracing
   zipkin:
@@ -46,9 +31,7 @@ services:
     environment:
       - SERVER_PORT=${USERS_API_PORT}
       - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      redis:
-        condition: service_healthy
+    # No depends_on needed - Redis is managed by Terraform
     restart: unless-stopped
     networks:
       - microservices-network
@@ -82,13 +65,17 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
-      - REDIS_CHANNEL=${REDIS_CHANNEL} 
-    depends_on:
-      redis:
-        condition: service_healthy
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHANNEL=${REDIS_CHANNEL}
+      # Cache Aside Pattern TTL Configuration (from Terraform)
+      - CACHE_TTL_DEFAULT=${CACHE_TTL_DEFAULT}
+      - CACHE_TTL_TODO_DATA=${CACHE_TTL_TODO_DATA}
+      - CACHE_TTL_USER_DATA=${CACHE_TTL_USER_DATA} 
+    # No depends_on needed - Redis is managed by Terraform
     restart: unless-stopped
     networks:
-      - microservices-network
+      - microservices-dev-network  # Use Terraform network to connect to Redis
+      - microservices-network      # Keep original for other services
 
   # Log Message Processor - Python Application
   log-message-processor:
@@ -101,14 +88,14 @@ services:
     environment:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_CHANNEL=${REDIS_CHANNEL}
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-    depends_on:
-      redis:
-        condition: service_healthy
+    # No depends_on needed - Redis is managed by Terraform
     restart: unless-stopped
     networks:
-      - microservices-network
+      - microservices-dev-network  # Use Terraform network to connect to Redis
+      - microservices-network      # Keep original for other services
 
   # Frontend - Vue.js Application
   frontend:
@@ -133,10 +120,12 @@ services:
 networks:
   microservices-network:
     driver: bridge
+  # External network created by Terraform
+  microservices-dev-network:
+    external: true
 
 # ===========================================
 # VOLUMES
 # ===========================================
-volumes:
-  redis_data:
-    driver: local
+# Redis data is managed by Terraform infrastructure
+# No volumes needed for this setup
