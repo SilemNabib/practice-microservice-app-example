@@ -1,0 +1,142 @@
+services:
+  # ===========================================
+  # INFRASTRUCTURE SERVICES
+  # ===========================================
+  
+  # Redis - Cache and Message Queue
+  redis:
+    image: redis:7.0-alpine
+    container_name: redis
+    ports:
+      - "${REDIS_PORT}:6379" 
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - microservices-network
+
+  # Zipkin - Distributed Tracing
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+
+  # Users API - Spring Boot Application
+  users-api:
+    build:
+      context: ./users-api
+      dockerfile: Dockerfile
+    container_name: users-api
+    ports:
+      - "${USERS_API_PORT}:${USERS_API_PORT}"
+    environment:
+      - SERVER_PORT=${USERS_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Auth API - Go Application
+  auth-api:
+    build:
+      context: ./auth-api
+      dockerfile: Dockerfile
+    container_name: auth-api
+    ports:
+      - "${AUTH_API_PORT}:${AUTH_API_PORT}"
+    environment:
+      - AUTH_API_PORT=${AUTH_API_PORT}
+      - USERS_API_ADDRESS=http://users-api:${USERS_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Todos API - Node.js Application
+  todos-api:
+    build:
+      context: ./todos-api
+      dockerfile: Dockerfile
+    container_name: todos-api
+    ports:
+      - "${TODO_API_PORT}:${TODO_API_PORT}"
+    environment:
+      - TODO_API_PORT=${TODO_API_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_CHANNEL=${REDIS_CHANNEL} 
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Log Message Processor - Python Application
+  log-message-processor:
+    build:
+      context: ./log-message-processor
+      dockerfile: Dockerfile
+    container_name: log-processor
+    ports:
+      - "${LOG_MESSAGE_PROCESSOR_PORT}:${LOG_MESSAGE_PROCESSOR_PORT}"
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_CHANNEL=${REDIS_CHANNEL}
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # Frontend - Vue.js Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    environment:
+      - PORT=80
+      - AUTH_API_URL=${AUTH_API_URL}
+      - TODOS_API_URL=${TODOS_API_URL}
+      - ZIPKIN_URL=${ZIPKIN_URL}
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+# ===========================================
+# NETWORKS
+# ===========================================
+networks:
+  microservices-network:
+    driver: bridge
+
+# ===========================================
+# VOLUMES
+# ===========================================
+volumes:
+  redis_data:
+    driver: local
