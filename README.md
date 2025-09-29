@@ -134,7 +134,7 @@ The architecture for our microservices application is designed to leverage Googl
 ## Overview
 
 <div align="center">
-  <img src="docs/microservices-architecture-v1.jpg" alt="Microservices Architecture Diagram" width="800">
+  <img src="docs/microservices-architecture-v1.jpeg" alt="Microservices Architecture Diagram" width="800">
   <p><em>Architecture diagram showing the microservices components and their interactions</em></p>
 </div>
 
