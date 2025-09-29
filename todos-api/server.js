@@ -67,7 +67,7 @@ const localServiceName = 'todos-api';
 const tracer = new Tracer({ctxImpl, recorder, localServiceName});
 
 
-app.use(jwt({ secret: jwtSecret }))
+app.use(jwt({ secret: jwtSecret }).unless({path: ['/health']}))
 app.use(zipkinMiddleware({tracer}));
 app.use(function (err, req, res, next) {
   if (err.name === 'UnauthorizedError') {
