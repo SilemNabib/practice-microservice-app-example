@@ -43,7 +43,89 @@ For operations, we extend the GitFlow model with environment-specific branches:
 This approach ensures that infrastructure changes follow a controlled promotion path from development to production, reducing the risk of configuration drift and deployment issues.
 
 # Selected Cloud Patterns
->TODO: Add selected cloud patterns
+We will implement the following cloud design patterns:
+
+### Cache-Aside Pattern
+
+The Cache-Aside pattern is implemented in our TODOs API using Redis as the caching layer. This pattern improves performance by reducing database load and latency for frequently accessed data.
+
+#### Implementation Details
+
+**Technology Stack:**
+- **Cache Store**: Redis (Cloud Memorystore in production)
+- **Implementation**: Node.js with redis client
+- **Cache Strategy**: Write-Around with selective invalidation
+
+**Key Features:**
+1. **Cache Key Strategy**: Hierarchical key naming for efficient organization
+   - User todos: `todos:user:{username}`
+   - Individual todos: `todo:{username}:{todoId}`
+
+2. **Cache Operations**:
+   - **Cache Hit**: Data retrieved directly from Redis (sub-millisecond response)
+   - **Cache Miss**: Data fetched from MongoDB and cached for future requests
+   - **Cache Expiry**: 5-minute TTL to ensure data freshness
+
+3. **Write Strategy**: Write-Around pattern implementation
+   - New data written directly to database
+   - Cache invalidated after write operations
+   - Prevents cache pollution with infrequently accessed data
+
+4. **Error Handling**: Graceful degradation when Redis is unavailable
+   - Cache failures don't break the application
+   - Automatic fallback to database operations
+
+**Performance Benefits:**
+- Significantly reduced database load for frequently accessed data
+- Improved response times for cached content
+- Enhanced system scalability under high concurrent load
+
+**Monitoring**: Comprehensive logging with `[CACHE-ASIDE]` prefixes for operational visibility.
+
+### Circuit Breaker Pattern
+
+The Circuit Breaker pattern is implemented to improve system resilience by preventing cascading failures when the database is unavailable or experiencing high latency.
+
+#### Implementation Details
+
+**Technology Stack:**
+- **Library**: Opossum Circuit Breaker for Node.js
+- **Target**: MongoDB database operations
+- **Scope**: All CRUD operations in TODOs API
+
+**Configuration:**
+- **Timeout**: 5 seconds per operation
+- **Error Threshold**: 50% failure rate triggers circuit opening
+- **Reset Timeout**: 30 seconds before attempting recovery
+- **Rolling Window**: 10 seconds with 10 buckets for failure tracking
+
+**Circuit States:**
+1. **Closed (Normal)**: All requests pass through to database
+2. **Open (Failing)**: Requests immediately rejected, returns 503 Service Unavailable
+3. **Half-Open (Testing)**: Limited requests allowed to test service recovery
+
+**Protected Operations:**
+- `find()` - List todos queries
+- `findOne()` - Single todo retrieval
+- `insertOne()` - Todo creation
+- `deleteOne()` - Todo deletion
+- `updateOne()` - Todo updates
+
+**Error Handling:**
+- **Circuit Open**: Returns HTTP 503 with "Service temporarily unavailable"
+- **Timeout**: Returns HTTP 503 with "Database temporarily unavailable"
+- **Other Errors**: Returns HTTP 500 with generic error message
+
+**Monitoring & Health Checks:**
+- Real-time circuit breaker statistics via `/health` endpoint
+- Comprehensive event logging for all state transitions
+- Integration with application health checks
+
+**Benefits:**
+- Prevents database overload during outages
+- Faster failure detection and recovery
+- Improved user experience with predictable error responses
+- System stability under adverse conditions
 
 # Architecture Diagram
 
@@ -51,31 +133,10 @@ The architecture for our microservices application is designed to leverage Googl
 
 ## Overview
 
-Our architecture consists of the following key components:
-
-- Frontend (Vue.js) deployed on Cloud Run
-- Auth API (Go) deployed on Cloud Run
-- TODOs API (Node.js) deployed on Cloud Run
-- Users API (Java Spring Boot) deployed on GKE
-- Log Message Processor (Python) deployed on Cloud Run
-- Redis for message queue and caching
-- Cloud SQL for persistent data storage
-
-## Cloud Patterns
-
-We will implement the following cloud design patterns:
-
-### Cache-Aside Pattern
-
->TODO: Extend this section with implementation details of the Cache-Aside pattern using Cloud Memorystore (Redis) to improve performance by reducing database load and latency for frequently accessed data.
-
-### Circuit Breaker Pattern
-
->TODO: Extend this section with implementation details of the Circuit Breaker pattern to improve system resilience by preventing cascading failures when a service is unavailable or experiencing high latency.
-
-## Diagram
-
->TODO: Insert architecture diagram image showing the components and their interactions, including the implementation of the selected cloud patterns.
+<div align="center">
+  <img src="docs/microservices-architecture-v1.jpg" alt="Microservices Architecture Diagram" width="800">
+  <p><em>Architecture diagram showing the microservices components and their interactions</em></p>
+</div>
 
 # Development Pipelines
 >TODO: Add development pipelines
