@@ -3,14 +3,7 @@ const TodoController = require('./todoController');
 module.exports = function (app, {tracer, redisClient, logChannel, db}) {
   const todoController = new TodoController({tracer, redisClient, logChannel, db});
   
-  app.route('/todos')
-    .get(function(req,resp) {return todoController.list(req,resp)})
-    .post(function(req,resp) {return todoController.create(req,resp)});
-
-  app.route('/todos/:taskId')
-    .delete(function(req,resp) {return todoController.delete(req,resp)});
-    
-  // Health check endpoint that includes circuit breaker status
+  // Health check endpoint that includes circuit breaker status (no JWT required)
   app.route('/health')
     .get(function(req, res) {
       const circuitBreakerStats = todoController._dbCircuitBreaker.getStats();
@@ -25,4 +18,11 @@ module.exports = function (app, {tracer, redisClient, logChannel, db}) {
         }
       });
     });
+
+  app.route('/todos')
+    .get(function(req,resp) {return todoController.list(req,resp)})
+    .post(function(req,resp) {return todoController.create(req,resp)});
+
+  app.route('/todos/:taskId')
+    .delete(function(req,resp) {return todoController.delete(req,resp)});
 };
