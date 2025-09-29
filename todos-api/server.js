@@ -2,6 +2,7 @@
 const express = require('express')
 const bodyParser = require("body-parser")
 const jwt = require('express-jwt')
+const { MongoClient } = require('mongodb')
 
 const ZIPKIN_URL = process.env.ZIPKIN_URL || 'http://127.0.0.1:9411/api/v2/spans';
 const {Tracer, 
@@ -29,6 +30,26 @@ const redisClient = require("redis").createClient({
       return Math.min(options.attempt * 100, 2000);
   }        
 });
+
+// MongoDB configuration
+const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
+const mongoDbName = process.env.MONGO_DB_NAME || 'todosdb';
+let mongoClient;
+let db;
+
+// Initialize MongoDB connection
+async function initMongoDB() {
+  try {
+    mongoClient = new MongoClient(mongoUrl);
+    await mongoClient.connect();
+    db = mongoClient.db(mongoDbName);
+    console.log('Connected to MongoDB successfully');
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    process.exit(1);
+  }
+}
+
 const port = process.env.TODO_API_PORT || 8082
 const jwtSecret = process.env.JWT_SECRET || "foo"
 
@@ -46,7 +67,7 @@ const localServiceName = 'todos-api';
 const tracer = new Tracer({ctxImpl, recorder, localServiceName});
 
 
-app.use(jwt({ secret: jwtSecret }))
+app.use(jwt({ secret: jwtSecret }).unless({path: ['/health']}))
 app.use(zipkinMiddleware({tracer}));
 app.use(function (err, req, res, next) {
   if (err.name === 'UnauthorizedError') {
@@ -57,8 +78,24 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 const routes = require('./routes')
-routes(app, {tracer, redisClient, logChannel})
 
-app.listen(port, function () {
-  console.log('todo list RESTful API server started on: ' + port)
-})
+// Initialize MongoDB and start server
+async function startServer() {
+  await initMongoDB();
+  routes(app, {tracer, redisClient, logChannel, db});
+  
+  app.listen(port, function () {
+    console.log(`todos-api listening on port ${port}!`);
+  });
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  if (mongoClient) {
+    await mongoClient.close();
+  }
+  process.exit(0);
+});
+
+startServer().catch(console.error);

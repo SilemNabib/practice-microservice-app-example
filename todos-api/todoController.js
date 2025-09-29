@@ -1,53 +1,223 @@
 'use strict';
-const cache = require('memory-cache');
 const {Annotation, 
     jsonEncoder: {JSON_V2}} = require('zipkin');
+const { createDatabaseCircuitBreaker } = require('./circuitBreaker');
 
 const OPERATION_CREATE = 'CREATE',
       OPERATION_DELETE = 'DELETE';
 
 class TodoController {
-    constructor({tracer, redisClient, logChannel}) {
+    constructor({tracer, redisClient, logChannel, db}) {
         this._tracer = tracer;
         this._redisClient = redisClient;
         this._logChannel = logChannel;
+        this._db = db;
+        this._collection = db.collection('todos');
+        this._cacheExpiry = 300; // 5 minutes cache expiry
+        
+        // Initialize circuit breaker for database operations
+        this._dbCircuitBreaker = createDatabaseCircuitBreaker(this._collection);
+        console.log('[CIRCUIT-BREAKER] Database circuit breaker initialized');
     }
 
-    // TODO: these methods are not concurrent-safe
-    list (req, res) {
-        const data = this._getTodoData(req.user.username)
-
-        res.json(data.items)
+    // Cache key generators
+    _getUserTodosKey(username) {
+        return `todos:user:${username}`;
     }
 
-    create (req, res) {
-        // TODO: must be transactional and protected for concurrent access, but
-        // the purpose of the whole example app it's enough
-        const data = this._getTodoData(req.user.username)
-        const todo = {
-            content: req.body.content,
-            id: data.lastInsertedID
+    _getTodoKey(username, todoId) {
+        return `todo:${username}:${todoId}`;
+    }
+
+    // Cache helper methods
+    async _getFromCache(key) {
+        return new Promise((resolve, reject) => {
+            console.log(`[CACHE-ASIDE] Attempting to GET from cache: ${key}`);
+            this._redisClient.get(key, (err, result) => {
+                if (err) {
+                    console.error(`[CACHE-ASIDE] Redis GET error for key ${key}:`, err);
+                    resolve(null); // Return null on error to fallback to DB
+                } else {
+                    if (result) {
+                        console.log(`[CACHE-ASIDE] ✅ Cache HIT for key: ${key}`);
+                    } else {
+                        console.log(`[CACHE-ASIDE] ❌ Cache MISS for key: ${key}`);
+                    }
+                    resolve(result ? JSON.parse(result) : null);
+                }
+            });
+        });
+    }
+
+    async _setCache(key, data, expiry = this._cacheExpiry) {
+        return new Promise((resolve) => {
+            console.log(`[CACHE-ASIDE] Setting cache for key: ${key} (expiry: ${expiry}s)`);
+            this._redisClient.setex(key, expiry, JSON.stringify(data), (err) => {
+                if (err) {
+                    console.error(`[CACHE-ASIDE] Redis SET error for key ${key}:`, err);
+                } else {
+                    console.log(`[CACHE-ASIDE] ✅ Successfully cached data for key: ${key}`);
+                }
+                resolve(); // Always resolve to not block the main flow
+            });
+        });
+    }
+
+    async _deleteFromCache(key) {
+        return new Promise((resolve) => {
+            console.log(`[CACHE-ASIDE] Deleting from cache: ${key}`);
+            this._redisClient.del(key, (err) => {
+                if (err) {
+                    console.error(`[CACHE-ASIDE] Redis DEL error for key ${key}:`, err);
+                } else {
+                    console.log(`[CACHE-ASIDE] ✅ Successfully deleted cache for key: ${key}`);
+                }
+                resolve();
+            });
+        });
+    }
+
+    async _invalidateUserCache(username) {
+        console.log(`[CACHE-ASIDE] Invalidating cache for user: ${username}`);
+        const userTodosKey = this._getUserTodosKey(username);
+        await this._deleteFromCache(userTodosKey);
+    }
+
+    async list (req, res) {
+        try {
+            const username = req.user.username;
+            const cacheKey = this._getUserTodosKey(username);
+            
+            console.log(`[CACHE-ASIDE] LIST operation for user: ${username}`);
+            
+            // Try to get from cache first (Cache-Aside pattern)
+            let cachedTodos = await this._getFromCache(cacheKey);
+            
+            if (cachedTodos) {
+                console.log(`[CACHE-ASIDE] Returning cached todos for user: ${username} (${cachedTodos.length} items)`);
+                return res.json(cachedTodos);
+            }
+            
+            console.log(`[CACHE-ASIDE] Fetching todos from database for user: ${username}`);
+            
+            // If not in cache, get from database using circuit breaker
+            const todos = await this._dbCircuitBreaker.find.fire({ username: username });
+            const todoItems = todos.reduce((acc, todo) => {
+                acc[todo.id] = { id: todo.id, content: todo.content };
+                return acc;
+            }, {});
+            
+            const todoList = Object.values(todoItems);
+            console.log(`[CACHE-ASIDE] Found ${todoList.length} todos in database for user: ${username}`);
+            
+            // Store in cache for future requests
+            await this._setCache(cacheKey, todoList);
+            
+            res.json(todoList);
+        } catch (error) {
+            console.error('Error listing todos:', error);
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
         }
-        data.items[data.lastInsertedID] = todo
-
-        data.lastInsertedID++
-        this._setTodoData(req.user.username, data)
-
-        this._logOperation(OPERATION_CREATE, req.user.username, todo.id)
-
-        res.json(todo)
     }
 
-    delete (req, res) {
-        const data = this._getTodoData(req.user.username)
-        const id = req.params.taskId
-        delete data.items[id]
-        this._setTodoData(req.user.username, data)
+    async create (req, res) {
+        try {
+            const username = req.user.username;
+            
+            console.log(`[CACHE-ASIDE] CREATE operation for user: ${username}`);
+            
+            // Get the next ID for this user using circuit breaker
+            const lastTodo = await this._dbCircuitBreaker.findOne.fire(
+                { username: username },
+                { sort: { id: -1 } }
+            );
+            
+            const nextId = lastTodo ? lastTodo.id + 1 : 1;
+            
+            const todo = {
+                id: nextId,
+                content: req.body.content,
+                username: username,
+                createdAt: new Date()
+            };
 
-        this._logOperation(OPERATION_DELETE, req.user.username, id)
+            // Insert into database first using circuit breaker
+            console.log(`[CACHE-ASIDE] Inserting new todo (ID: ${nextId}) into database for user: ${username}`);
+            await this._dbCircuitBreaker.insertOne.fire(todo);
+            
+            // Invalidate user's todos cache (Write-Around pattern)
+            console.log(`[CACHE-ASIDE] Applying Write-Around pattern - invalidating cache after CREATE`);
+            await this._invalidateUserCache(username);
+            
+            this._logOperation(OPERATION_CREATE, username, todo.id);
 
-        res.status(204)
-        res.send()
+            res.json({ id: todo.id, content: todo.content });
+        } catch (error) {
+            console.error('Error creating todo:', error);
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        }
+    }
+
+    async delete (req, res) {
+        try {
+            const id = parseInt(req.params.taskId);
+            const username = req.user.username;
+            
+            console.log(`[CACHE-ASIDE] DELETE operation for user: ${username}, todo ID: ${id}`);
+            
+            const result = await this._dbCircuitBreaker.deleteOne.fire({
+                id: id,
+                username: username
+            });
+
+            if (result.deletedCount === 0) {
+                console.log(`[CACHE-ASIDE] Todo not found for deletion - ID: ${id}, user: ${username}`);
+                return res.status(404).json({ error: 'Todo not found' });
+            }
+
+            console.log(`[CACHE-ASIDE] Successfully deleted todo (ID: ${id}) from database for user: ${username}`);
+            
+            // Invalidate user's todos cache (Write-Around pattern)
+            console.log(`[CACHE-ASIDE] Applying Write-Around pattern - invalidating cache after DELETE`);
+            await this._invalidateUserCache(username);
+
+            this._logOperation(OPERATION_DELETE, username, id);
+
+            res.status(204).send();
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        }
     }
 
     _logOperation (opName, username, todoId) {
@@ -60,36 +230,6 @@ class TodoController {
                 todoId: todoId,
             }))
         })
-    }
-
-    _getTodoData (userID) {
-        var data = cache.get(userID)
-        if (data == null) {
-            data = {
-                items: {
-                    '1': {
-                        id: 1,
-                        content: "Create new todo",
-                    },
-                    '2': {
-                        id: 2,
-                        content: "Update me",
-                    },
-                    '3': {
-                        id: 3,
-                        content: "Delete example ones",
-                    }
-                },
-                lastInsertedID: 3
-            }
-
-            this._setTodoData(userID, data)
-        }
-        return data
-    }
-
-    _setTodoData (userID, data) {
-        cache.put(userID, data)
     }
 }
 
