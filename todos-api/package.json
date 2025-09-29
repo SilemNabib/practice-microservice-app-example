@@ -10,14 +10,15 @@
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.18.2",
-    "express": "^4.15.4",
+    "express": "^4.16.2",
     "express-jwt": "^5.3.0",
-    "memory-cache": "^0.2.0",
+    "mongodb": "^4.17.2",
     "redis": "^2.8.0",
-    "zipkin": "^0.11.2",
-    "zipkin-context-cls": "^0.11.0",
-    "zipkin-instrumentation-express": "^0.11.2",
-    "zipkin-transport-http": "^0.11.2"
+    "zipkin": "^0.11.1",
+    "zipkin-context-cls": "^0.6.1",
+    "zipkin-instrumentation-express": "^0.11.0",
+    "zipkin-instrumentation-redis": "^0.11.0",
+    "zipkin-transport-http": "^0.11.1"
   },
   "devDependencies": {
     "nodemon": "^1.11.0"
