@@ -33,7 +33,16 @@ jobs:
 
       - name: Build and Push
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:latest
-          docker build -t $IMAGE ./${{ matrix.service }}
-          docker push $IMAGE
-          echo "✅ Pushed: $IMAGE"
+          IMAGE_LATEST=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:latest
+          IMAGE_SHA=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
+          docker build -t $IMAGE_LATEST -t $IMAGE_SHA ./${{ matrix.service }}
+          docker push $IMAGE_LATEST
+          docker push $IMAGE_SHA
+          echo "✅ Pushed: $IMAGE_LATEST"
+          echo "✅ Pushed: $IMAGE_SHA"
+
+      - name: Update Kubernetes manifests
+        run: |
+          IMAGE_URL=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
+          sed -i "s|\${IMAGE_URL}|$IMAGE_URL|g" k8s/applications/${{ matrix.service }}.yaml
+          echo "✅ Updated k8s/applications/${{ matrix.service }}.yaml with image: ${IMAGE_URL}"

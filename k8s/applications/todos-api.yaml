@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todos-api
+  namespace: microservices-app
+  labels:
+    app: todos-api
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todos-api
+  template:
+    metadata:
+      labels:
+        app: todos-api
+        version: v1
+    spec:
+      containers:
+      - name: todos-api
+        image: ${IMAGE_URL}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: TODO_API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: TODO_API_PORT
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_PORT
+        - name: REDIS_CHANNEL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_CHANNEL
+        - name: MONGO_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MONGO_URL
+        - name: MONGO_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MONGO_DB_NAME
+        - name: ZIPKIN_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: ZIPKIN_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todos-api-service
+  namespace: microservices-app
+  labels:
+    app: todos-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: todos-api
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todos-api-ingress
+  namespace: microservices-app
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+spec:
+  rules:
+  - host: todos-api.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: todos-api-service
+            port:
+              number: 3000

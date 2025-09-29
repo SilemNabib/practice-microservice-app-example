@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: microservices-app
+data:
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_CHANNEL: "log_channel"
+  
+  # MongoDB Configuration
+  MONGO_PORT: "27017"
+  MONGO_DB_NAME: "microservices_db"
+  MONGO_URL: "mongodb://mongodb-service:27017/microservices_db"
+  
+  # API Ports - Variables de configuración de red (no sensibles)
+  SERVER_PORT: "8080"          # Usado por users-api (Spring Boot)
+  AUTH_API_PORT: "8000"        # Usado por auth-api (Go)
+  TODO_API_PORT: "3000"        # Usado por todos-api (Node.js)
+  
+  # External URLs - URLs internas del cluster (no sensibles)
+  AUTH_API_URL: "http://auth-api-service:8000"
+  TODOS_API_URL: "http://todos-api-service:3000"
+  ZIPKIN_URL: "http://zipkin-service:9411"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: microservices-app
+type: Opaque
+stringData:
+  # Variables sensibles - valores desde variables de entorno
+  JWT_SECRET: "${JWT_SECRET}"
+  MONGO_ROOT_USERNAME: "${MONGO_ROOT_USERNAME}"
+  MONGO_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD}"

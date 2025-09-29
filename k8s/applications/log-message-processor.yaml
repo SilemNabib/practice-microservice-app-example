@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-message-processor
+  namespace: microservices-app
+  labels:
+    app: log-message-processor
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-message-processor
+  template:
+    metadata:
+      labels:
+        app: log-message-processor
+        version: v1
+    spec:
+      containers:
+      - name: log-message-processor
+        image: ${IMAGE_URL}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_PORT
+        - name: REDIS_CHANNEL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_CHANNEL
+        - name: ZIPKIN_URL
+          value: "http://zipkin-service:9411/api/v2/spans"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        # No health checks for this processor as it's a background service
+        # that processes messages from Redis queue
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: log-message-processor-service
+  namespace: microservices-app
+  labels:
+    app: log-message-processor
+spec:
+  type: ClusterIP
+  # This service doesn't expose any ports as it's a background processor
+  # but we create the service for potential monitoring or debugging
+  clusterIP: None
+  selector:
+    app: log-message-processor
