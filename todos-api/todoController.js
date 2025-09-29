@@ -1,6 +1,7 @@
 'use strict';
 const {Annotation, 
     jsonEncoder: {JSON_V2}} = require('zipkin');
+const { createDatabaseCircuitBreaker } = require('./circuitBreaker');
 
 const OPERATION_CREATE = 'CREATE',
       OPERATION_DELETE = 'DELETE';
@@ -13,6 +14,10 @@ class TodoController {
         this._db = db;
         this._collection = db.collection('todos');
         this._cacheExpiry = 300; // 5 minutes cache expiry
+        
+        // Initialize circuit breaker for database operations
+        this._dbCircuitBreaker = createDatabaseCircuitBreaker(this._collection);
+        console.log('[CIRCUIT-BREAKER] Database circuit breaker initialized');
     }
 
     // Cache key generators
@@ -95,8 +100,8 @@ class TodoController {
             
             console.log(`[CACHE-ASIDE] Fetching todos from database for user: ${username}`);
             
-            // If not in cache, get from database
-            const todos = await this._collection.find({ username: username }).toArray();
+            // If not in cache, get from database using circuit breaker
+            const todos = await this._dbCircuitBreaker.find.fire({ username: username });
             const todoItems = todos.reduce((acc, todo) => {
                 acc[todo.id] = { id: todo.id, content: todo.content };
                 return acc;
@@ -111,7 +116,17 @@ class TodoController {
             res.json(todoList);
         } catch (error) {
             console.error('Error listing todos:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
         }
     }
 
@@ -121,8 +136,8 @@ class TodoController {
             
             console.log(`[CACHE-ASIDE] CREATE operation for user: ${username}`);
             
-            // Get the next ID for this user
-            const lastTodo = await this._collection.findOne(
+            // Get the next ID for this user using circuit breaker
+            const lastTodo = await this._dbCircuitBreaker.findOne.fire(
                 { username: username },
                 { sort: { id: -1 } }
             );
@@ -136,9 +151,9 @@ class TodoController {
                 createdAt: new Date()
             };
 
-            // Insert into database first
+            // Insert into database first using circuit breaker
             console.log(`[CACHE-ASIDE] Inserting new todo (ID: ${nextId}) into database for user: ${username}`);
-            await this._collection.insertOne(todo);
+            await this._dbCircuitBreaker.insertOne.fire(todo);
             
             // Invalidate user's todos cache (Write-Around pattern)
             console.log(`[CACHE-ASIDE] Applying Write-Around pattern - invalidating cache after CREATE`);
@@ -149,7 +164,17 @@ class TodoController {
             res.json({ id: todo.id, content: todo.content });
         } catch (error) {
             console.error('Error creating todo:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
         }
     }
 
@@ -160,7 +185,7 @@ class TodoController {
             
             console.log(`[CACHE-ASIDE] DELETE operation for user: ${username}, todo ID: ${id}`);
             
-            const result = await this._collection.deleteOne({
+            const result = await this._dbCircuitBreaker.deleteOne.fire({
                 id: id,
                 username: username
             });
@@ -181,7 +206,17 @@ class TodoController {
             res.status(204).send();
         } catch (error) {
             console.error('Error deleting todo:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            
+            // Check if it's a circuit breaker rejection or timeout
+            if (error.name === 'OpenCircuitError') {
+                console.error('[CIRCUIT-BREAKER] Database circuit is open - service unavailable');
+                res.status(503).json({ error: 'Service temporarily unavailable' });
+            } else if (error.code === 'ETIMEDOUT' || error.message?.includes('Timed out')) {
+                console.error('[CIRCUIT-BREAKER] Database operation timed out');
+                res.status(503).json({ error: 'Database temporarily unavailable - please try again later' });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
         }
     }
 
