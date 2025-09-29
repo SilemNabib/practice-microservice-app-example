@@ -11,7 +11,7 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   REPOSITORY: docker-repository
-  REGISTRY: ${{ vars.REGION }}-docker.pkg.dev
+  REGISTRY: us-central1-docker.pkg.dev
 
 jobs:
   build-push:
